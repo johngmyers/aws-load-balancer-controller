@@ -109,6 +109,58 @@ func Test_defaultTargetGroupAttributeReconciler_Reconcile(t *testing.T) {
 			},
 		},
 		{
+			name: "multiple attributes should be deleted",
+			fields: fields{
+				describeTargetGroupAttributesWithContextCalls: []describeTargetGroupAttributesWithContextCall{
+					{
+						req: &elbv2sdk.DescribeTargetGroupAttributesInput{
+							TargetGroupArn: awssdk.String("my-arn"),
+						},
+						resp: &elbv2sdk.DescribeTargetGroupAttributesOutput{
+							Attributes: []*elbv2sdk.TargetGroupAttribute{
+								{
+									Key:   awssdk.String("slow_start.duration_second"),
+									Value: awssdk.String("50"),
+								},
+								{
+									Key:   awssdk.String("stickiness.enabled"),
+									Value: awssdk.String("false"),
+								},
+							},
+						},
+					},
+				},
+				modifyTargetGroupAttributesWithContextCalls: []modifyTargetGroupAttributesWithContextCall{
+					{
+						req: &elbv2sdk.ModifyTargetGroupAttributesInput{
+							TargetGroupArn: awssdk.String("my-arn"),
+							Attributes: []*elbv2sdk.TargetGroupAttribute{
+								{
+									Key: awssdk.String("slow_start.duration_second"),
+								},
+								{
+									Key: awssdk.String("stickiness.enabled"),
+								},
+							},
+						},
+					},
+				},
+			},
+			args: args{
+				sdkTG: TargetGroupWithTags{
+					TargetGroup: &elbv2sdk.TargetGroup{
+						TargetGroupArn: awssdk.String("my-arn"),
+					},
+				},
+				resTG: &elbv2model.TargetGroup{
+					ResourceMeta: coremodel.NewResourceMeta(stack, "AWS::ElasticLoadBalancingV2::TargetGroup", "id-1"),
+					Spec: elbv2model.TargetGroupSpec{
+						TargetGroupAttributes: []elbv2model.TargetGroupAttribute{},
+					},
+				},
+			},
+		},
+		{
 			name: "no attributes should be updated",
 			fields: fields{
 				describeTargetGroupAttributesWithContextCalls: []describeTargetGroupAttributesWithContextCall{
@@ -145,6 +197,10 @@ func Test_defaultTargetGroupAttributeReconciler_Reconcile(t *testing.T) {
 							{
 								Key:   "slow_start.duration_second",
 								Value: "50",
+							},
+							{
+								Key:   "stickiness.enabled",
+								Value: "false",
 							},
 						},
 					},

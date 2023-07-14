@@ -2,6 +2,7 @@ package elbv2
 
 import (
 	"context"
+
 	awssdk "github.com/aws/aws-sdk-go/aws"
 	elbv2sdk "github.com/aws/aws-sdk-go/service/elbv2"
 	"github.com/go-logr/logr"
@@ -40,8 +41,8 @@ func (r *defaultTargetGroupAttributeReconciler) Reconcile(ctx context.Context, r
 		return err
 	}
 
-	attributesToUpdate, _ := algorithm.DiffStringMap(desiredAttrs, currentAttrs)
-	if len(attributesToUpdate) > 0 {
+	attributesToUpdate, attributesToDelete := algorithm.DiffStringMap(desiredAttrs, currentAttrs)
+	if len(attributesToUpdate)+len(attributesToDelete) > 0 {
 		req := &elbv2sdk.ModifyTargetGroupAttributesInput{
 			TargetGroupArn: sdkTG.TargetGroup.TargetGroupArn,
 			Attributes:     nil,
@@ -50,6 +51,11 @@ func (r *defaultTargetGroupAttributeReconciler) Reconcile(ctx context.Context, r
 			req.Attributes = append(req.Attributes, &elbv2sdk.TargetGroupAttribute{
 				Key:   awssdk.String(attrKey),
 				Value: awssdk.String(attributesToUpdate[attrKey]),
+			})
+		}
+		for _, attrKey := range sets.StringKeySet(attributesToDelete).List() {
+			req.Attributes = append(req.Attributes, &elbv2sdk.TargetGroupAttribute{
+				Key: awssdk.String(attrKey),
 			})
 		}
 
